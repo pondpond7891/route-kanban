@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ff6a00">
+<meta name="google" content="notranslate">
+<title>Route Kanban</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--p:#ff6a00;--p2:#ff9a3c;--bg:#fff6ee;--card:#fff;--text:#1f1a17;--mut:#8a7f77;--line:#f0e4d9;--soft:#fff1e4;--sh:0 4px 18px rgba(255,106,0,.12)}
+@media (prefers-color-scheme:dark){:root{--bg:#14110f;--card:#1e1a17;--text:#f4ede7;--mut:#a39a92;--line:#2f2924;--soft:#2a211a;--sh:0 4px 18px rgba(0,0,0,.4)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif}
+body{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+button{font-family:inherit;cursor:pointer}
+.hero{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;padding:calc(env(safe-area-inset-top) + 18px) 18px 74px;border-radius:0 0 28px 28px}
+.hero small{opacity:.85;font-size:13px}
+.hero h1{margin:2px 0 0;font-size:22px;line-height:1.3}
+.wrap{padding:0 14px}
+.card{background:var(--card);border-radius:20px;box-shadow:var(--sh)}
+.search{margin-top:-52px;padding:14px;display:grid;grid-template-columns:22px 1fr 40px;gap:8px 8px;align-items:center}
+.pts{display:flex;flex-direction:column;align-items:center;gap:3px}
+.dot{width:12px;height:12px;border-radius:50%}
+.dot.a{background:#16a34a}.dot.b{background:#ef4444}
+.pts i{width:2px;height:24px;background:repeating-linear-gradient(var(--line) 0 4px,transparent 4px 8px)}
+.inputs{display:flex;flex-direction:column;gap:8px}
+.inp{display:flex;background:var(--soft);border-radius:14px;overflow:hidden}
+.inp input{flex:1;min-width:0;border:0;background:transparent;color:var(--text);padding:13px 12px;font-size:16px;outline:none}
+.inp button{border:0;background:transparent;font-size:19px;padding:0 12px}
+.swap{border:0;background:var(--soft);border-radius:12px;height:40px;font-size:18px;color:var(--p);font-weight:700}
+.go{grid-column:1/-1;border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--p),var(--p2));box-shadow:0 6px 14px rgba(255,106,0,.3)}
+.go:disabled{opacity:.6}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:14px 14px 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1.5px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px;border-radius:999px;font-size:14px}
+.chip.on{background:var(--p);border-color:var(--p);color:#fff;font-weight:700}
+.map-card{margin:12px 14px 0;overflow:hidden;position:relative}
+#map{height:250px;border-radius:20px}
+#status{padding:10px 18px 2px;font-size:13px;color:var(--mut)}
+#status.err{color:#dc2626}
+.sum{margin:12px 14px 0;padding:16px;border-radius:20px;color:#fff;background:linear-gradient(135deg,#ff6a00,#ff3d00);box-shadow:0 8px 20px rgba(255,80,0,.3)}
+.sum b.t{font-size:13px;opacity:.9;font-weight:600}
+.sum h2{margin:4px 0 12px;font-size:19px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{background:rgba(255,255,255,.2);border-radius:14px;padding:10px 6px;text-align:center}
+.tile div{font-size:17px;font-weight:800}.tile span{font-size:11px;opacity:.9}
+.sec{display:flex;justify-content:space-between;align-items:center;margin:20px 18px 0;font-weight:800;font-size:17px}
+.tabs{display:flex;gap:6px;margin:10px 14px 0;background:var(--soft);padding:4px;border-radius:14px}
+.tab{flex:1;border:0;background:transparent;color:var(--mut);padding:9px 2px;border-radius:11px;font-size:12.5px;font-weight:600}
+.tab.on{background:var(--card);color:var(--p);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.board{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;padding:12px 14px;scrollbar-width:none}
+.board::-webkit-scrollbar{display:none}
+.col{flex:0 0 88%;scroll-snap-align:center}
+.col h3{margin:0 0 10px 2px;font-size:14px;display:flex;align-items:center;gap:6px}
+.col h3 em{font-style:normal;background:var(--soft);color:var(--p);border-radius:20px;padding:1px 9px;font-size:12px}
+.rc{background:var(--card);border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:var(--sh);border:2px solid transparent;position:relative;overflow:hidden}
+.rc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}
+.rc.sel{border-color:var(--p)}
+.rc .top{display:flex;justify-content:space-between;align-items:flex-start;padding-left:6px}
+.rc .nm{font-weight:700;font-size:15px}
+.rc .big{font-size:21px;font-weight:800;color:var(--p)}
+.tags{padding-left:6px;margin:6px 0 10px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--soft);color:var(--p);margin-right:5px}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding-left:6px}
+.mini div{background:var(--soft);border-radius:12px;padding:8px 4px;text-align:center}
+.mini b{display:block;font-size:14px}.mini span{font-size:11px;color:var(--mut)}
+.empty{text-align:center;color:var(--mut);padding:26px 0;font-size:13px}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.1);border-radius:20px 20px 0 0;z-index:900}
+.nav button{border:0;background:transparent;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;padding:4px 18px}
+.nav button span{font-size:22px}
+.nav button.on{color:var(--p)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:1000}
+.ov.open{display:flex}
+.sheet{width:100%;background:var(--card);border-radius:24px 24px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 12px}
+.sheet label{font-size:12px;color:var(--mut);display:block;margin:10px 0 4px}
+.sheet input{width:100%;border:0;background:var(--soft);color:var(--text);border-radius:12px;padding:13px;font-size:16px}
+.sheet p{font-size:12px;color:var(--mut);margin:12px 0 0;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="hero">
+  <small>🚚 Route Kanban</small>
+  <h1>วันนี้จะไปไหนดี?<br>หาเส้นทางที่ใช่ ประหยัดทั้งเวลาและน้ำมัน</h1>
+</div>
+
+<div class="wrap">
+  <div class="card search">
+    <div class="pts"><span class="dot a"></span><i></i><span class="dot b"></span></div>
+    <div class="inputs">
+      <div class="inp"><input id="origin" placeholder="ต้นทาง" autocomplete="off"><button id="btnGps" aria-label="ตำแหน่งปัจจุบัน">📍</button></div>
+      <div class="inp"><input id="dest" placeholder="ปลายทาง" autocomplete="off"></div>
+    </div>
+    <button class="swap" id="btnSwap" aria-label="สลับ">⇅</button>
+    <button class="go" id="btnSearch">🔍 ค้นหาเส้นทาง</button>
+  </div>
+</div>
+
+<div class="chips" id="chips"></div>
+
+<div class="card map-card"><div id="map"></div></div>
+<div id="status">กรอกต้นทางและปลายทาง หรือกด 📍 เพื่อใช้ตำแหน่งปัจจุบัน</div>
+
+<div id="summary"></div>
+
+<div id="result" style="display:none">
+  <div class="sec"><span>📋 เปรียบเทียบเส้นทาง</span></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="board" id="board"></div>
+</div>
+
+<nav class="nav">
+  <button id="nHome" class="on"><span>🏠</span>หน้าหลัก</button>
+  <button id="nRoutes"><span>🗂️</span>เส้นทาง</button>
+  <button id="nSet"><span>⚙️</span>ตั้งค่า</button>
+</nav>
+
+<div class="ov" id="ov">
+  <div class="sheet">
+    <h3>⚙️ ตั้งค่าการคำนวณน้ำมัน</h3>
+    <label>อัตราสิ้นเปลือง (กม./ลิตร)</label><input id="kmpl" type="number" step="0.5" min="1">
+    <label>ราคาน้ำมัน (บาท/ลิตร)</label><input id="price" type="number" step="0.5" min="1">
+    <button class="go" id="btnSave" style="width:100%;margin-top:16px">บันทึก</button>
+    <p>ใช้ OpenStreetMap + OSRM ฟรี · เวลาคำนวณจากความเร็วถนนทั่วไป (ไม่รวมรถติดเรียลไทม์) · ค่าน้ำมันเป็นการประมาณ</p>
+  </div>
+</div>
+
+<script>
+const V = {"🚗":["รถเก๋ง",14],"🛻":["กระบะ",11],"🚐":["รถตู้",9],"🚚":["6 ล้อ",6],"🚛":["เทรลเลอร์",3.5],"🏍️":["มอเตอร์ไซค์",35]};
+const COLORS = ["#ff6a00","#16a34a","#2563eb","#dc2626","#7c3aed"];
+const $ = id => document.getElementById(id);
+let cfg = Object.assign({vehicle:"🚗", kmpl:14, price:38}, JSON.parse(localStorage.getItem("rk_cfg") || "{}"));
+if (!V[cfg.vehicle]) cfg.vehicle = "🚗";
+let originCoords = null, routes = [], selected = 0, lines = [], markers = [];
+const saveCfg = () => localStorage.setItem("rk_cfg", JSON.stringify(cfg));
+const setStatus = (t, e) => { $("status").textContent = t; $("status").className = e ? "err" : ""; };
+const fmtTime = m => { m = Math.round(m); const h = Math.floor(m/60); return h ? `${h} ชม. ${m%60} นาที` : `${m} นาที`; };
+
+/* ---------- ประเภทรถ ---------- */
+function drawChips(){
+  $("chips").innerHTML = Object.entries(V).map(([e,[n]]) =>
+    `<button class="chip ${e===cfg.vehicle?"on":""}" data-v="${e}">${e} ${n}</button>`).join("");
+  document.querySelectorAll(".chip").forEach(b => b.onclick = () => {
+    cfg.vehicle = b.dataset.v; cfg.kmpl = V[cfg.vehicle][1]; saveCfg();
+    $("kmpl").value = cfg.kmpl; drawChips(); recalc();
+  });
+}
+drawChips();
+$("kmpl").value = cfg.kmpl; $("price").value = cfg.price;
+
+/* ---------- ตั้งค่า / เมนูล่าง ---------- */
+const openSheet = o => $("ov").classList.toggle("open", o);
+$("nSet").onclick = () => openSheet(true);
+$("ov").onclick = e => { if (e.target.id === "ov") openSheet(false); };
+$("btnSave").onclick = () => {
+  cfg.kmpl = +$("kmpl").value || 14; cfg.price = +$("price").value || 38; saveCfg();
+  openSheet(false); recalc(); setStatus("บันทึกแล้ว ✔");
+};
+function setNav(id){ document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.id === id)); }
+$("nHome").onclick = () => { setNav("nHome"); window.scrollTo({top:0, behavior:"smooth"}); };
+$("nRoutes").onclick = () => {
+  setNav("nRoutes");
+  if (routes.length) $("result").scrollIntoView({behavior:"smooth"}); else setStatus("ยังไม่มีผลการค้นหา ลองค้นหาเส้นทางก่อนครับ", true);
+};
+
+/* ---------- แผนที่ ---------- */
+const map = L.map("map", {zoomControl:false}).setView([13.7563,100.5018], 6);
+L.control.zoom({position:"topright"}).addTo(map);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+
+/* ---------- ตำแหน่ง ---------- */
+$("btnGps").onclick = () => {
+  if (!navigator.geolocation) return setStatus("อุปกรณ์ไม่รองรับ GPS", true);
+  setStatus("กำลังหาตำแหน่งปัจจุบัน…");
+  navigator.geolocation.getCurrentPosition(p => {
+    originCoords = {lat:p.coords.latitude, lng:p.coords.longitude};
+    $("origin").value = "📍 ตำแหน่งปัจจุบัน";
+    map.setView([originCoords.lat, originCoords.lng], 13);
+    setStatus("ได้ตำแหน่งปัจจุบันแล้ว ✔");
+  }, () => setStatus("ขอตำแหน่งไม่สำเร็จ: กรุณาอนุญาต Location", true), {enableHighAccuracy:true, timeout:15000});
+};
+$("origin").addEventListener("input", () => originCoords = null);
+$("btnSwap").onclick = () => {
+  const o = $("origin").value, d = $("dest").value;
+  $("origin").value = d; $("dest").value = o; originCoords = null;
+};
+
+async function geocode(q){
+  const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=th&q=" + encodeURIComponent(q));
+  const j = await r.json();
+  if (!j.length) throw new Error(`ไม่พบสถานที่ "${q}"`);
+  return {lat:+j[0].lat, lng:+j[0].lon};
+}
+
+/* ---------- คำนวณ ---------- */
+function fuelEstimate(km, min){
+  const v = km / Math.max(min/60, 0.01);
+  const f = v < 25 ? 1.4 : v < 45 ? 1.15 : v <= 90 ? 1 : 1.15;
+  return km / cfg.kmpl * f;
+}
+function recalc(){
+  if (!routes.length) return;
+  routes.forEach(r => { r.fuel = fuelEstimate(r.km, r.min); r.cost = r.fuel * cfg.price; });
+  render();
+}
+
+async function search(){
+  const o = $("origin").value.trim(), d = $("dest").value.trim();
+  if (!o || !d) return setStatus("กรุณาระบุต้นทางและปลายทาง", true);
+  $("btnSearch").disabled = true; $("btnSearch").textContent = "⏳ กำลังค้นหา…";
+  setStatus("กำลังค้นหาเส้นทาง…");
+  try {
+    const A = originCoords || await geocode(o);
+    const B = await geocode(d);
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${A.lng},${A.lat};${B.lng},${B.lat}?alternatives=true&overview=full&geometries=geojson`);
+    const data = await res.json();
+    if (data.code !== "Ok" || !data.routes?.length) throw new Error("ไม่พบเส้นทางระหว่างสองจุดนี้");
+    routes = data.routes.map((r,i) => ({idx:i, name:`เส้นทาง ${i+1}`, km:r.distance/1000, min:r.duration/60,
+      path:r.geometry.coordinates.map(c => [c[1], c[0]])}));
+    selected = 0; recalc(); drawMap(true);
+    setStatus(`พบ ${routes.length} เส้นทาง · แตะการ์ดเพื่อดูบนแผนที่`);
+    $("result").style.display = "block"; $("summary").scrollIntoView({behavior:"smooth", block:"start"});
+  } catch (e) { setStatus("ผิดพลาด: " + e.message, true); }
+  $("btnSearch").disabled = false; $("btnSearch").textContent = "🔍 ค้นหาเส้นทาง";
+}
+$("btnSearch").onclick = search;
+
+/* ---------- แสดงผล ---------- */
+function card(r, badges){
+  return `<div class="rc ${r.idx===selected?"sel":""}" style="--c:${COLORS[r.idx%5]}" data-i="${r.idx}">
+    <div class="top"><div class="nm">🛣️ ${r.name}</div><div class="big">${fmtTime(r.min)}</div></div>
+    <div class="tags">${badges.map(b=>`<span class="tag">${b}</span>`).join("")}</div>
+    <div class="mini"><div><b>${r.km.toFixed(1)}</b><span>กม.</span></div>
+    <div><b>${r.fuel.toFixed(2)}</b><span>ลิตร</span></div>
+    <div><b>${Math.round(r.cost)}</b><span>บาท</span></div></div></div>`;
+}
+function render(){
+  const best = f => routes.reduce((a,b) => f(b) < f(a) ? b : a);
+  const fast = best(r=>r.min), short = best(r=>r.km), eco = best(r=>r.fuel);
+  const bd = {}; routes.forEach(r => bd[r.idx] = []);
+  bd[fast.idx].push("⚡ เร็วที่สุด"); bd[short.idx].push("📏 สั้นที่สุด"); bd[eco.idx].push("⛽ ประหยัดที่สุด");
+
+  $("summary").innerHTML = `<div class="sum"><b class="t">⚡ แนะนำ · เส้นทางที่เร็วที่สุด</b>
+    <h2>${cfg.vehicle} ${V[cfg.vehicle][0]} · ${fast.name}</h2>
+    <div class="tiles"><div class="tile"><div>${fmtTime(fast.min)}</div><span>เวลาเดินทาง</span></div>
+    <div class="tile"><div>${fast.km.toFixed(1)} กม.</div><span>ระยะทาง</span></div>
+    <div class="tile"><div>฿${Math.round(fast.cost)}</div><span>ค่าน้ำมัน ${fast.fuel.toFixed(1)} ล.</span></div></div></div>`;
+
+  const cols = [["ทั้งหมด","📋 ทุกเส้นทาง",routes],["เร็ว","⚡ เร็วที่สุด",[fast]],["สั้น","📏 สั้นที่สุด",[short]],["ประหยัด","⛽ ประหยัดน้ำมัน",[eco]]];
+  $("tabs").innerHTML = cols.map((c,i)=>`<button class="tab ${i===0?"on":""}" data-i="${i}">${c[0]}</button>`).join("");
+  $("board").innerHTML = cols.map(([,t,l]) =>
+    `<section class="col"><h3>${t}<em>${l.length}</em></h3>${l.map(r=>card(r,bd[r.idx])).join("") || '<div class="empty">— ไม่มี —</div>'}</section>`).join("");
+
+  const go = i => { const c = $("board").children[i]; $("board").scrollTo({left:c.offsetLeft - 14, behavior:"smooth"}); };
+  document.querySelectorAll(".tab").forEach(t => t.onclick = () => go(+t.dataset.i));
+  $("board").onscroll = () => {
+    const i = Math.round($("board").scrollLeft / ($("board").scrollWidth / cols.length));
+    document.querySelectorAll(".tab").forEach((t,k) => t.classList.toggle("on", k===i));
+  };
+  document.querySelectorAll(".rc").forEach(el => el.onclick = () => {
+    selected = +el.dataset.i;
+    document.querySelectorAll(".rc").forEach(x => x.classList.toggle("sel", +x.dataset.i === selected));
+    drawMap(false); $("map").scrollIntoView({behavior:"smooth", block:"center"});
+  });
+}
+
+function drawMap(fit){
+  lines.forEach(l=>map.removeLayer(l)); markers.forEach(m=>map.removeLayer(m)); lines=[]; markers=[];
+  [...routes].sort((a,b)=>(a.idx===selected)-(b.idx===selected)).forEach(r => {
+    const s = r.idx === selected;
+    lines.push(L.polyline(r.path, {color:COLORS[r.idx%5], opacity:s?1:.4, weight:s?7:4}).addTo(map));
+  });
+  const p = routes[0].path;
+  markers.push(L.circleMarker(p[0], {radius:9, color:"#fff", weight:3, fillColor:"#16a34a", fillOpacity:1}).bindTooltip("ต้นทาง").addTo(map));
+  markers.push(L.circleMarker(p[p.length-1], {radius:9, color:"#fff", weight:3, fillColor:"#ef4444", fillOpacity:1}).bindTooltip("ปลายทาง").addTo(map));
+  if (fit) map.fitBounds(L.latLngBounds(routes.flatMap(r => r.path)), {padding:[24,24]});
+}
+</script>
+</body>
+</html>
