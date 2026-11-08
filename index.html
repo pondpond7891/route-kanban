@@ -78,6 +78,22 @@ button{font-family:inherit;cursor:pointer}
 .startbar b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .startbar span{font-size:12px;color:var(--mut)}
 .startbar button{border:0;border-radius:14px;padding:12px 16px;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--p),#ff3d00);white-space:nowrap}
+.drive{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:space-between;background:linear-gradient(160deg,#1f1a17,#3a2414);color:#fff;z-index:1100;padding:calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 22px);text-align:center}
+.drive.open{display:flex}
+.drive.over{animation:flash .7s infinite}
+@keyframes flash{0%,100%{background:#b91c1c}50%{background:#ef4444}}
+.dtop{width:100%;display:flex;justify-content:space-between;align-items:center;font-size:17px}
+.dtop button{border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:12px;font-size:18px;padding:6px 12px}
+.dnum span{font-size:128px;font-weight:800;line-height:1;display:block}
+.dnum small{font-size:18px;opacity:.85}
+.dlim{display:flex;align-items:center;gap:12px;font-size:16px}
+.dlim button{border:0;background:rgba(255,255,255,.2);color:#fff;border-radius:14px;font-size:20px;font-weight:800;padding:10px 18px}
+.dlim b{font-size:28px;border:4px solid #ef4444;background:#fff;color:#111;border-radius:50%;min-width:66px;height:66px;display:inline-flex;align-items:center;justify-content:center}
+.dstat{font-size:19px;font-weight:700;min-height:28px}
+.dinfo{font-size:13px;opacity:.85}
+.dstop{border:0;width:100%;border-radius:16px;padding:16px;font-size:17px;font-weight:800;background:#fff;color:#b91c1c}
+.sheet .chk{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--text);margin:10px 0 0}
+.sheet .chk input{width:auto}
 .nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.1);border-radius:20px 20px 0 0;z-index:900}
 .nav button{border:0;background:transparent;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;padding:4px 18px}
 .nav button span{font-size:22px}
@@ -122,6 +138,17 @@ button{font-family:inherit;cursor:pointer}
   <div class="board" id="board"></div>
 </div>
 
+<div class="drive" id="drive">
+  <div class="dtop"><b>🚦 โหมดขับขี่</b><button id="dClose">✕</button></div>
+  <div class="dnum"><span id="dSpeed">0</span><small>กม./ชม.</small></div>
+  <div>
+    <div class="dlim"><button id="dMinus">−5</button><div>จำกัด<br><b id="dLimit">90</b></div><button id="dPlus">+5</button></div>
+    <div class="dstat" id="dStat" style="margin-top:14px">กำลังรอสัญญาณ GPS…</div>
+    <div class="dinfo" id="dInfo"></div>
+  </div>
+  <button class="dstop" id="dStop">หยุดโหมดขับขี่</button>
+</div>
+
 <div class="startbar" id="startbar">
   <div class="info"><b id="sbName"></b><span id="sbSub"></span></div>
   <button id="btnStart">🧭 เริ่มนำทาง</button>
@@ -130,6 +157,7 @@ button{font-family:inherit;cursor:pointer}
 <nav class="nav">
   <button id="nHome" class="on"><span>🏠</span>หน้าหลัก</button>
   <button id="nRoutes"><span>🗂️</span>เส้นทาง</button>
+  <button id="nDrive"><span>🚦</span>ขับขี่</button>
   <button id="nSet"><span>⚙️</span>ตั้งค่า</button>
 </nav>
 
@@ -138,6 +166,10 @@ button{font-family:inherit;cursor:pointer}
     <h3>⚙️ ตั้งค่าการคำนวณน้ำมัน</h3>
     <label>อัตราสิ้นเปลือง (กม./ลิตร)</label><input id="kmpl" type="number" step="0.5" min="1">
     <label>ราคาน้ำมัน (บาท/ลิตร)</label><input id="price" type="number" step="0.5" min="1">
+    <label>ความเร็วจำกัด (กม./ชม.) สำหรับแจ้งเตือน</label><input id="limit" type="number" step="5" min="20" max="200">
+    <label class="chk"><input type="checkbox" id="cSnd"> เสียงเตือน</label>
+    <label class="chk"><input type="checkbox" id="cVoice"> เตือนด้วยเสียงพูด</label>
+    <label class="chk"><input type="checkbox" id="cVib"> สั่นเตือน (เฉพาะ Android)</label>
     <button class="go" id="btnSave" style="width:100%;margin-top:16px">บันทึก</button>
     <p>ใช้ OpenStreetMap + OSRM ฟรี · เวลาคำนวณจากความเร็วถนนทั่วไป (ไม่รวมรถติดเรียลไทม์) · ค่าน้ำมันเป็นการประมาณ</p>
   </div>
@@ -147,7 +179,7 @@ button{font-family:inherit;cursor:pointer}
 const V = {"🚗":["รถเก๋ง",14],"🛻":["กระบะ",11],"🚐":["รถตู้",9],"🚚":["6 ล้อ",6],"🚛":["เทรลเลอร์",3.5],"🏍️":["มอเตอร์ไซค์",35]};
 const COLORS = ["#ff6a00","#16a34a","#2563eb","#dc2626","#7c3aed"];
 const $ = id => document.getElementById(id);
-let cfg = Object.assign({vehicle:"🚗", kmpl:14, price:38}, JSON.parse(localStorage.getItem("rk_cfg") || "{}"));
+let cfg = Object.assign({vehicle:"🚗", kmpl:14, price:38, limit:90, snd:true, vib:true, voice:true}, JSON.parse(localStorage.getItem("rk_cfg") || "{}"));
 if (!V[cfg.vehicle]) cfg.vehicle = "🚗";
 let originCoords = null, routes = [], selected = 0, lines = [], markers = [];
 const saveCfg = () => localStorage.setItem("rk_cfg", JSON.stringify(cfg));
@@ -165,13 +197,15 @@ function drawChips(){
 }
 drawChips();
 $("kmpl").value = cfg.kmpl; $("price").value = cfg.price;
+$("limit").value = cfg.limit; $("cSnd").checked = cfg.snd; $("cVoice").checked = cfg.voice; $("cVib").checked = cfg.vib;
 
 /* ---------- ตั้งค่า / เมนูล่าง ---------- */
 const openSheet = o => $("ov").classList.toggle("open", o);
 $("nSet").onclick = () => openSheet(true);
 $("ov").onclick = e => { if (e.target.id === "ov") openSheet(false); };
 $("btnSave").onclick = () => {
-  cfg.kmpl = +$("kmpl").value || 14; cfg.price = +$("price").value || 38; saveCfg();
+  cfg.kmpl = +$("kmpl").value || 14; cfg.price = +$("price").value || 38;
+  cfg.limit = +$("limit").value || 90; cfg.snd = $("cSnd").checked; cfg.voice = $("cVoice").checked; cfg.vib = $("cVib").checked; saveCfg();
   openSheet(false); recalc(); setStatus("บันทึกแล้ว ✔");
 };
 function setNav(id){ document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.id === id)); }
@@ -295,6 +329,74 @@ function drawMap(fit){
   if (fit) map.fitBounds(L.latLngBounds(routes.flatMap(r => r.path)), {padding:[24,24]});
 }
 
+/* ---------- โหมดขับขี่ + แจ้งเตือนความเร็ว ---------- */
+let watchId = null, lastPos = null, isOver = false, lastAlert = 0, maxSp = 0, overCount = 0, wake = null, audioCtx = null;
+const rad = x => x * Math.PI / 180;
+function haversine(a, b){
+  const R = 6371000, dLa = rad(b.latitude - a.lat), dLo = rad(b.longitude - a.lng);
+  const s = Math.sin(dLa/2)**2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.latitude)) * Math.sin(dLo/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+function beep(){
+  if (!audioCtx) return;
+  for (let i = 0; i < 2; i++) {
+    const t = audioCtx.currentTime + i * 0.35, o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    o.start(t); o.stop(t + 0.25);
+  }
+}
+function alertNow(){
+  const now = Date.now(); if (now - lastAlert < 5000) return; lastAlert = now;
+  if (cfg.snd) beep();
+  if (cfg.vib && navigator.vibrate) navigator.vibrate([300,150,300]);
+  if (cfg.voice && "speechSynthesis" in window) {
+    const u = new SpeechSynthesisUtterance("ขับเร็วเกินกำหนด กรุณาลดความเร็ว"); u.lang = "th-TH";
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }
+}
+function showLimit(){ $("dLimit").textContent = cfg.limit; $("limit").value = cfg.limit; }
+function onPos(p){
+  const c = p.coords; let v = c.speed;
+  if (v == null || isNaN(v)) {
+    v = 0;
+    if (lastPos) { const dt = (p.timestamp - lastPos.t) / 1000; if (dt > 0) v = haversine(lastPos, c) / dt; }
+  }
+  lastPos = {lat:c.latitude, lng:c.longitude, t:p.timestamp};
+  let kmh = Math.round(v * 3.6); if (kmh < 3) kmh = 0;
+  $("dSpeed").textContent = kmh; maxSp = Math.max(maxSp, kmh);
+  if (kmh > cfg.limit) {
+    if (!isOver) { isOver = true; overCount++; }
+    $("drive").classList.add("over"); $("dStat").textContent = "⚠️ ขับเร็วเกินกำหนด! ลดความเร็ว"; alertNow();
+  } else if (kmh <= cfg.limit - 2) {
+    isOver = false; $("drive").classList.remove("over"); $("dStat").textContent = "✅ ความเร็วปกติ";
+  }
+  $("dInfo").textContent = `เร็วสุด ${maxSp} กม./ชม. · เกินกำหนด ${overCount} ครั้ง`;
+}
+async function getWake(){ try { if ("wakeLock" in navigator) wake = await navigator.wakeLock.request("screen"); } catch(e){} }
+document.addEventListener("visibilitychange", () => { if (watchId !== null && document.visibilityState === "visible") getWake(); });
+function startDrive(){
+  if (!navigator.geolocation) return setStatus("อุปกรณ์ไม่รองรับ GPS", true);
+  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume();
+  maxSp = 0; overCount = 0; isOver = false; lastPos = null; showLimit();
+  $("dSpeed").textContent = "0"; $("dStat").textContent = "กำลังรอสัญญาณ GPS…"; $("dInfo").textContent = "";
+  $("drive").classList.add("open"); getWake();
+  watchId = navigator.geolocation.watchPosition(onPos,
+    () => { $("dStat").textContent = "ขอตำแหน่งไม่สำเร็จ: กรุณาอนุญาต Location"; },
+    {enableHighAccuracy:true, maximumAge:0, timeout:20000});
+}
+function stopDrive(){
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId); watchId = null;
+  if (wake) { wake.release().catch(()=>{}); wake = null; }
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  $("drive").classList.remove("open", "over");
+  setStatus(`จบโหมดขับขี่ · เร็วสุด ${maxSp} กม./ชม. · เกินกำหนด ${overCount} ครั้ง`);
+}
+$("nDrive").onclick = startDrive;
+$("dStop").onclick = stopDrive; $("dClose").onclick = stopDrive;
+$("dPlus").onclick = () => { cfg.limit = Math.min(200, cfg.limit + 5); saveCfg(); showLimit(); };
+$("dMinus").onclick = () => { cfg.limit = Math.max(20, cfg.limit - 5); saveCfg(); showLimit(); };
+
 /* ---------- เริ่มนำทางด้วย Google Maps ---------- */
 function updateStartBar(){
   const r = routes[selected];
@@ -321,6 +423,7 @@ $("btnStart").onclick = () => {
   const url = navUrl(r);
   if (!window.open(url, "_blank")) location.href = url;
 };
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>
 </html>
