@@ -43,11 +43,20 @@ button{font-family:inherit;cursor:pointer}
 .chip{flex:0 0 auto;border:1.5px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px;border-radius:999px;font-size:14px}
 .chip.on{background:var(--p);border-color:var(--p);color:#fff;font-weight:700}
 .map-card{margin:12px 14px 0;overflow:hidden;position:relative}
+.sheet textarea{width:100%;border:0;background:var(--soft);color:var(--text);border-radius:12px;padding:13px;font-size:15px;font-family:inherit;resize:none;margin-bottom:8px}
 .agrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .agrid .full{grid-column:1/-1}
 .ares{margin-top:12px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--mut)}
 .ares .lv{color:var(--p);font-weight:700}
 .ares button{text-align:left;border:0;background:var(--soft);color:var(--text);border-radius:12px;padding:12px;font-size:13px;line-height:1.45}
+.poi{display:flex;flex-direction:column;align-items:center}
+.poi span{font-size:21px;line-height:22px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.poi em{font-style:normal;font-size:11px;font-weight:800;color:#b45309;text-align:center;line-height:1.15;max-width:96px;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 4px #fff}
+#map.lowz .poi em{display:none}
+.sug{grid-column:1/-1;display:none;flex-direction:column;background:var(--card);border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
+.sug.open{display:flex}
+.sug button{text-align:left;border:0;background:transparent;color:var(--text);padding:10px 12px;font-size:14px;border-bottom:1px solid var(--line)}
+.sug small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
 .pinbtn{position:absolute;left:10px;bottom:10px;z-index:1000;border:0;border-radius:999px;padding:10px 14px;font-size:13px;font-weight:700;background:#fff;color:var(--p);box-shadow:0 3px 10px rgba(0,0,0,.3)}
 .pinbtn.on{background:var(--p);color:#fff}
 .pin{font-size:30px;line-height:30px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45))}
@@ -134,6 +143,7 @@ button{font-family:inherit;cursor:pointer}
       <div class="inp"><input id="dest" placeholder="ปลายทาง" autocomplete="off"><button id="btnAddr" aria-label="ค้นหาด้วยที่อยู่">🏠</button></div>
     </div>
     <button class="swap" id="btnSwap" aria-label="สลับ">⇅</button>
+    <div class="sug" id="sug"></div>
     <button class="go" id="btnSearch">🔍 ค้นหาเส้นทาง</button>
   </div>
 </div>
@@ -141,6 +151,7 @@ button{font-family:inherit;cursor:pointer}
 <div class="chips" id="chips"></div>
 
 <div class="card map-card"><div id="map"></div><button class="pinbtn" id="btnPin">📌 ปักหมุดปลายทาง</button></div>
+<div class="chips" id="poiChips" style="padding-top:10px"></div>
 <div id="status">กรอกต้นทางและปลายทาง หรือกด 📍 เพื่อใช้ตำแหน่งปัจจุบัน</div>
 
 <div id="summary"></div>
@@ -155,6 +166,8 @@ button{font-family:inherit;cursor:pointer}
   <div class="sheet" style="max-height:90vh;overflow-y:auto">
     <h3>🏠 ค้นหาด้วยที่อยู่</h3>
     <div style="display:flex;gap:8px;margin-bottom:10px"><button class="chip on" id="tDest">ใช้เป็นปลายทาง</button><button class="chip" id="tOrg">ใช้เป็นต้นทาง</button></div>
+    <textarea id="aFree" rows="3" placeholder="วางที่อยู่ทั้งก้อน หรือพิมพ์ชื่อสถานที่ เช่น 143/66 ซอยนครอินทร์ 5 ต.บางคูเวียง อ.บางกรวย จ.นนทบุรี 11130"></textarea>
+    <div style="display:flex;gap:8px;margin-bottom:12px"><button class="chip" id="aParse">✨ แยกช่องอัตโนมัติ</button><button class="chip on" id="aAI">🤖 ให้ AI ช่วยหา</button></div>
     <div class="agrid">
       <input id="aNo" placeholder="บ้านเลขที่">
       <input id="aSoi" placeholder="ซอย">
@@ -195,14 +208,16 @@ button{font-family:inherit;cursor:pointer}
 </nav>
 
 <div class="ov" id="ov">
-  <div class="sheet">
-    <h3>⚙️ ตั้งค่าการคำนวณน้ำมัน</h3>
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <h3>⚙️ ตั้งค่า</h3>
     <label>อัตราสิ้นเปลือง (กม./ลิตร)</label><input id="kmpl" type="number" step="0.5" min="1">
     <label>ราคาน้ำมัน (บาท/ลิตร)</label><input id="price" type="number" step="0.5" min="1">
     <label>ความเร็วจำกัด (กม./ชม.) สำหรับแจ้งเตือน</label><input id="limit" type="number" step="5" min="20" max="200">
     <label class="chk"><input type="checkbox" id="cSnd"> เสียงเตือน</label>
     <label class="chk"><input type="checkbox" id="cVoice"> เตือนด้วยเสียงพูด</label>
     <label class="chk"><input type="checkbox" id="cVib"> สั่นเตือน (เฉพาะ Android)</label>
+    <label>🤖 Gemini API Key (ไม่บังคับ · ใช้กับปุ่ม “ให้ AI ช่วยหา” · เก็บในเครื่องคุณเท่านั้น)</label><input id="gKey" type="password" placeholder="AIza...">
+    <label>ชื่อโมเดล Gemini</label><input id="gModel" placeholder="gemini-2.5-flash-lite">
     <button class="go" id="btnSave" style="width:100%;margin-top:16px">บันทึก</button>
     <p>ใช้ OpenStreetMap + OSRM ฟรี · เวลาคำนวณจากความเร็วถนนทั่วไป (ไม่รวมรถติดเรียลไทม์) · ค่าน้ำมันเป็นการประมาณ</p>
   </div>
@@ -212,7 +227,7 @@ button{font-family:inherit;cursor:pointer}
 const V = {"🚗":["รถเก๋ง",14],"🛻":["กระบะ",11],"🚐":["รถตู้",9],"🚚":["6 ล้อ",6],"🚛":["เทรลเลอร์",3.5],"🏍️":["มอเตอร์ไซค์",35]};
 const COLORS = ["#ff6a00","#16a34a","#2563eb","#dc2626","#7c3aed"];
 const $ = id => document.getElementById(id);
-let cfg = Object.assign({vehicle:"🚗", kmpl:14, price:38, limit:90, snd:true, vib:true, voice:true}, JSON.parse(localStorage.getItem("rk_cfg") || "{}"));
+let cfg = Object.assign({vehicle:"🚗", kmpl:14, price:38, limit:90, snd:true, vib:true, voice:true, gKey:"", gModel:"gemini-2.5-flash-lite"}, JSON.parse(localStorage.getItem("rk_cfg") || "{}"));
 if (!V[cfg.vehicle]) cfg.vehicle = "🚗";
 let originCoords = null, routes = [], selected = 0, lines = [], markers = [];
 const saveCfg = () => localStorage.setItem("rk_cfg", JSON.stringify(cfg));
@@ -231,6 +246,7 @@ function drawChips(){
 drawChips();
 $("kmpl").value = cfg.kmpl; $("price").value = cfg.price;
 $("limit").value = cfg.limit; $("cSnd").checked = cfg.snd; $("cVoice").checked = cfg.voice; $("cVib").checked = cfg.vib;
+$("gKey").value = cfg.gKey; $("gModel").value = cfg.gModel;
 
 /* ---------- ตั้งค่า / เมนูล่าง ---------- */
 const openSheet = o => $("ov").classList.toggle("open", o);
@@ -238,7 +254,8 @@ $("nSet").onclick = () => openSheet(true);
 $("ov").onclick = e => { if (e.target.id === "ov") openSheet(false); };
 $("btnSave").onclick = () => {
   cfg.kmpl = +$("kmpl").value || 14; cfg.price = +$("price").value || 38;
-  cfg.limit = +$("limit").value || 90; cfg.snd = $("cSnd").checked; cfg.voice = $("cVoice").checked; cfg.vib = $("cVib").checked; saveCfg();
+  cfg.limit = +$("limit").value || 90; cfg.snd = $("cSnd").checked; cfg.voice = $("cVoice").checked; cfg.vib = $("cVib").checked;
+  cfg.gKey = $("gKey").value.trim(); cfg.gModel = $("gModel").value.trim() || "gemini-2.5-flash-lite"; saveCfg();
   openSheet(false); recalc(); setStatus("บันทึกแล้ว ✔");
 };
 function setNav(id){ document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.id === id)); }
@@ -334,6 +351,73 @@ async function searchAddr(){
 }
 $("aGo").onclick = searchAddr;
 
+/* ---------- ตัวช่วยแยกที่อยู่ (ไม่ใช้ AI) + AI (Gemini) ---------- */
+function parseAddr(s){
+  let t = " " + s.replace(/[,،]/g, " ").replace(/\s+/g, " ") + " ";
+  const o = {no:"", soi:"", road:"", tam:"", amp:"", prov:"", post:""};
+  const take = (re, key) => { const m = t.match(re); if (m) { o[key] = (m[1] || "").trim(); t = t.replace(m[0], " "); } };
+  take(/\b(\d{5})\b/, "post");
+  take(/(?:จังหวัด|จ\.)\s*([ก-๙]+)/, "prov");
+  if (!o.prov && /กรุงเทพ|กทม/.test(t)) { o.prov = "กรุงเทพมหานคร"; t = t.replace(/กรุงเทพมหานคร|กรุงเทพฯ?|กทม\.?/, " "); }
+  take(/(?:อำเภอ|อ\.|เขต)\s*([ก-๙]+)/, "amp");
+  take(/(?:ตำบล|ต\.|แขวง)\s*([ก-๙]+)/, "tam");
+  take(/(?:ถนน|ถ\.)\s*([ก-๙A-Za-z0-9]+)/, "road");
+  take(/(?:ซอย|ซ\.)\s*([ก-๙A-Za-z]*(?:\s*\d+)?)/, "soi");
+  t = t.replace(/(?:หมู่ที่|หมู่|ม\.)\s*\d+/, " ");
+  take(/(?:บ้านเลขที่|เลขที่)?\s*(\d{1,5}(?:\/\d{1,5})?(?:-\d{1,4})?)/, "no");
+  return o;
+}
+function fillAddr(o){
+  $("aNo").value = o.no || ""; $("aSoi").value = o.soi || ""; $("aRoad").value = o.road || "";
+  $("aTam").value = o.tam || ""; $("aAmp").value = o.amp || ""; $("aProv").value = o.prov || ""; $("aPost").value = o.post || "";
+}
+$("aParse").onclick = () => {
+  const s = $("aFree").value.trim();
+  if (!s) { $("aRes").textContent = "วางหรือพิมพ์ที่อยู่ในกล่องด้านบนก่อน"; return; }
+  fillAddr(parseAddr(s)); $("aRes").textContent = "แยกช่องให้แล้ว ตรวจดูก่อน แล้วกด “ค้นหาตำแหน่ง” ได้เลย";
+};
+async function askGemini(text){
+  const prompt = `คุณคือผู้ช่วยแยกที่อยู่และชื่อสถานที่ในประเทศไทยสำหรับค้นหาในแผนที่ ตอบเป็น JSON เท่านั้น รูปแบบ:
+{"no":"เลขที่บ้าน","soi":"ชื่อซอย","road":"ชื่อถนน(ไม่ต้องมีคำว่าถนน)","tam":"ตำบล/แขวง","amp":"อำเภอ/เขต","prov":"จังหวัด","post":"รหัสไปรษณีย์","place":"ชื่อสถานที่ทางการถ้าข้อความเป็นชื่อสถานที่ เช่น ร้าน ห้าง โรงเรียน วัด","keywords":["ชื่อทางเลือกสำหรับค้นแผนที่ ภาษาไทยและอังกฤษ ไม่เกิน 3 แบบ"]}
+กติกา: ช่องที่ไม่ทราบให้เป็นสตริงว่าง ห้ามเดาหรือแต่งพิกัด ห้ามแต่งข้อมูลที่ไม่มีในข้อความ แก้ตัวสะกดที่ผิดชัดเจนได้
+ข้อความ: ${text}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.gModel || "gemini-2.5-flash-lite")}:generateContent?key=${encodeURIComponent(cfg.gKey)}`;
+  const r = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json", temperature:0}})});
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error?.message || ("HTTP " + r.status));
+  const out = (j.candidates?.[0]?.content?.parts || []).map(x => x.text || "").join("");
+  return JSON.parse(out.replace(/```json|```/g, "").trim());
+}
+async function searchNames(names){
+  let first = true;
+  for (const q of names.filter(Boolean)) {
+    if (!first) await sleep(1100); first = false;
+    $("aRes").textContent = `🔎 กำลังค้นหา “${q}”…`;
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=th&accept-language=th&q=" + encodeURIComponent(q));
+    const j = await r.json(); if (j.length) return j;
+  }
+  return [];
+}
+$("aAI").onclick = async () => {
+  if (!cfg.gKey) { $("aRes").textContent = "ต้องใส่ Gemini API Key ก่อน (สมัครฟรีที่ aistudio.google.com/apikey) แล้วนำมาใส่ในเมนู ⚙️ ตั้งค่า · หรือใช้ปุ่ม “แยกช่องอัตโนมัติ” ซึ่งไม่ต้องใช้ key"; return; }
+  const text = $("aFree").value.trim() || ["aNo","aSoi","aRoad","aTam","aAmp","aProv","aPost"].map(id => $(id).value.trim()).join(" ").trim();
+  if (!text) { $("aRes").textContent = "พิมพ์ที่อยู่หรือชื่อสถานที่ก่อน"; return; }
+  $("aAI").disabled = true; $("aRes").textContent = "🤖 AI กำลังวิเคราะห์…";
+  try {
+    const a = await askGemini(text);
+    fillAddr(a);
+    const names = [a.place, ...(Array.isArray(a.keywords) ? a.keywords : [])];
+    if (a.place || names.some(Boolean)) {
+      const list = await searchNames(names.map(n => n && a.prov && !n.includes(a.prov) ? `${n} ${a.prov}` : n));
+      if (list.length) { showAddrResults(list, "ชื่อสถานที่", "ชื่อสถานที่"); $("aAI").disabled = false; return; }
+    }
+    $("aRes").textContent = "AI แยกช่องให้แล้ว กำลังค้นหาตามที่อยู่…";
+    await searchAddr();
+  } catch (e) { $("aRes").textContent = "AI ใช้งานไม่ได้: " + e.message + " (ถ้าเป็นเรื่องโมเดล ลองเปลี่ยนชื่อโมเดลในตั้งค่า)"; }
+  $("aAI").disabled = false;
+};
+
 /* ---------- ปักหมุดปลายทางบนแผนที่ ---------- */
 let destCoords = null, pinMarker = null, pickMode = false;
 function setPick(on){
@@ -401,6 +485,7 @@ function recalc(){
 }
 
 async function search(){
+  hideSug();
   const o = $("origin").value.trim(), d = $("dest").value.trim();
   if (!o || !d) return setStatus("กรุณาระบุต้นทางและปลายทาง", true);
   $("btnSearch").disabled = true; $("btnSearch").textContent = "⏳ กำลังค้นหา…";
@@ -577,6 +662,100 @@ $("btnApp").onclick = () => { const r = routes[selected]; if (r) startDrive(r); 
 $("dStop").onclick = stopDrive; $("dClose").onclick = stopDrive;
 $("dPlus").onclick = () => { cfg.limit = Math.min(200, cfg.limit + 5); saveCfg(); showLimit(); };
 $("dMinus").onclick = () => { cfg.limit = Math.max(20, cfg.limit - 5); saveCfg(); showLimit(); };
+
+/* ---------- ชื่อสถานที่บนแผนที่ (แบบ Google Maps) ---------- */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const POI = {
+  "🍽️ ร้านอาหาร": ['amenity~"^(restaurant|fast_food|food_court)$"'],
+  "☕ กาแฟ": ['amenity="cafe"'],
+  "⛽ ปั๊มน้ำมัน": ['amenity="fuel"'],
+  "🛏️ ที่พัก": ['tourism~"^(hotel|guest_house|hostel|motel|resort)$"'],
+  "🛒 ร้านสะดวกซื้อ": ['shop~"^(convenience|supermarket|mall|department_store)$"'],
+  "🏥 โรงพยาบาล": ['amenity~"^(hospital|clinic|pharmacy)$"'],
+  "🏧 ธนาคาร": ['amenity~"^(bank|atm)$"'],
+  "🛕 วัด/ท่องเที่ยว": ['amenity="place_of_worship"', 'tourism~"^(attraction|museum)$"']
+};
+let poiKey = null, poiLayer = L.layerGroup().addTo(map), poiSeq = 0, poiT = null;
+function setOriginPoint(c, label){
+  originCoords = c; $("origin").value = "📍 " + label;
+  if (orgMarker) map.removeLayer(orgMarker);
+  orgMarker = L.circleMarker([c.lat, c.lng], {radius:9, color:"#fff", weight:3, fillColor:"#16a34a", fillOpacity:1}).addTo(map);
+  setStatus("ตั้งต้นทางแล้ว · กด “ค้นหาเส้นทาง” ได้เลย");
+}
+function drawPoiChips(){
+  $("poiChips").innerHTML = Object.keys(POI).map(k => `<button class="chip ${k===poiKey?"on":""}" data-k="${esc(k)}">${esc(k)}</button>`).join("");
+  document.querySelectorAll("#poiChips .chip").forEach(b => b.onclick = () => {
+    poiKey = poiKey === b.dataset.k ? null : b.dataset.k; drawPoiChips(); poiLayer.clearLayers();
+    if (!poiKey) { setStatus("ปิดการแสดงสถานที่แล้ว"); return; }
+    if (map.getZoom() < 14) map.setZoom(15); else loadPoi();
+  });
+}
+drawPoiChips();
+function poiPopup(name, c, emoji, tags){
+  const d = document.createElement("div"); d.style.minWidth = "150px";
+  const t = document.createElement("b"); t.textContent = `${emoji} ${name}`; d.appendChild(t);
+  const addr = [tags["addr:housenumber"], tags["addr:street"], tags["addr:subdistrict"], tags["addr:district"]].filter(Boolean).join(" ");
+  if (addr) { const a = document.createElement("div"); a.textContent = addr; a.style.cssText = "font-size:12px;color:#666;margin-top:2px"; d.appendChild(a); }
+  const mk = (txt, fn, bg) => { const b = document.createElement("button"); b.textContent = txt; b.onclick = () => { map.closePopup(); fn(); };
+    b.style.cssText = `display:block;width:100%;margin-top:6px;padding:8px;border:0;border-radius:8px;background:${bg};color:#fff;font-weight:700;font-family:inherit`; d.appendChild(b); };
+  mk("📍 ไปที่นี่ (ตั้งเป็นปลายทาง)", () => placePin(c, true, name), "#ff6a00");
+  mk("ตั้งเป็นต้นทาง", () => setOriginPoint(c, name), "#16a34a");
+  return d;
+}
+function drawPoi(els){
+  poiLayer.clearLayers(); const emoji = poiKey.split(" ")[0]; let n = 0;
+  els.forEach(el => {
+    const tags = el.tags || {}, name = tags["name:th"] || tags.name; if (!name) return;
+    const lat = el.lat ?? el.center?.lat, lng = el.lon ?? el.center?.lon; if (lat == null) return;
+    const icon = L.divIcon({className:"poi", html:`<span>${emoji}</span><em>${esc(name)}</em>`, iconSize:[96,44], iconAnchor:[48,14]});
+    L.marker([lat, lng], {icon}).bindPopup(poiPopup(name, {lat, lng}, emoji, tags)).addTo(poiLayer); n++;
+  });
+  setStatus(n ? `พบ ${n} แห่งในบริเวณนี้ · แตะหมุดเพื่อดูรายละเอียดและเลือกเป็นปลายทาง` : "ไม่พบสถานที่ประเภทนี้ในบริเวณนี้ ลองเลื่อนหรือซูมแผนที่", !n);
+}
+async function loadPoi(){
+  if (!poiKey) return;
+  if (map.getZoom() < 14) { poiLayer.clearLayers(); setStatus("ซูมเข้าอีกนิดเพื่อดูชื่อสถานที่ในบริเวณนี้"); return; }
+  const b = map.getBounds(), bb = `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`;
+  const q = `[out:json][timeout:20];(${POI[poiKey].map(f => `nwr[${f}]["name"](${bb});`).join("")});out center 80;`;
+  const seq = ++poiSeq; setStatus("กำลังโหลดชื่อสถานที่…");
+  try {
+    const r = await fetch("https://overpass-api.de/api/interpreter", {method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body:"data=" + encodeURIComponent(q)});
+    const j = await r.json(); if (seq !== poiSeq) return; drawPoi(j.elements || []);
+  } catch (e) { if (seq === poiSeq) setStatus("โหลดสถานที่ไม่สำเร็จ ลองเลื่อนแผนที่เพื่อโหลดใหม่", true); }
+}
+map.on("moveend", () => { clearTimeout(poiT); if (poiKey) poiT = setTimeout(loadPoi, 700); });
+map.on("zoomend", () => $("map").classList.toggle("lowz", map.getZoom() < 16));
+$("map").classList.toggle("lowz", map.getZoom() < 16);
+
+/* ---------- คำแนะนำชื่อสถานที่ขณะพิมพ์ (Photon) ---------- */
+let sugT = null, sugSeq = 0;
+function hideSug(){ $("sug").classList.remove("open"); $("sug").innerHTML = ""; }
+function showSug(fs, id){
+  const box = $("sug"); box.innerHTML = "";
+  fs.forEach(f => {
+    const p = f.properties || {}, [lng, lat] = f.geometry.coordinates;
+    const name = p.name || [p.housenumber, p.street].filter(Boolean).join(" "); if (!name) return;
+    const sub = [p.street && p.street !== name ? p.street : "", p.district, p.city, p.state].filter(Boolean).join(", ");
+    const b = document.createElement("button"), t = document.createElement("b"); t.textContent = name; b.appendChild(t);
+    if (sub) { const s = document.createElement("small"); s.textContent = sub; b.appendChild(s); }
+    b.onclick = () => { hideSug(); const c = {lat, lng}; map.setView([lat, lng], 16); if (id === "dest") placePin(c, true, name); else setOriginPoint(c, name); };
+    box.appendChild(b);
+  });
+  box.classList.toggle("open", box.children.length > 0);
+}
+function suggest(id){
+  clearTimeout(sugT); const q = $(id).value.trim();
+  if (q.length < 3 || q.startsWith("📍") || q.startsWith("📌")) { hideSug(); return; }
+  sugT = setTimeout(async () => {
+    const seq = ++sugSeq, c = map.getCenter();
+    try {
+      const r = await fetch(`https://photon.komoot.io/api/?limit=6&bbox=97.3,5.5,105.7,20.6&lat=${c.lat}&lon=${c.lng}&q=${encodeURIComponent(q)}`);
+      const j = await r.json(); if (seq === sugSeq) showSug(j.features || [], id);
+    } catch (e) { hideSug(); }
+  }, 550);
+}
+$("dest").addEventListener("input", () => suggest("dest"));
+$("origin").addEventListener("input", () => suggest("origin"));
 
 /* ---------- เริ่มนำทางด้วย Google Maps ---------- */
 function updateStartBar(){
